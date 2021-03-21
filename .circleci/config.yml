@@ -11,8 +11,7 @@ jobs:
 
     branches:
       only:
-      - dev
-      - main
+       - main
 
     steps:
       - checkout
