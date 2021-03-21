@@ -24,7 +24,7 @@ jobs:
       - run:
           name: Clone key git repo
           command: |
-              git clone --single-branch --branch master git@github.com:https:AryaApoorva/codecircleci.git ../codecircleci
+              git clone --single-branch --branch main git@github.com:https:AryaApoorva/codecircleci.git
               #mv /root/codecircleci/android/prodKey.properties /root/project/android/
       - run:
           name: Run Flutter doctor
