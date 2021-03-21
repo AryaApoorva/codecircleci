@@ -49,7 +49,7 @@ android {
 
     signingConfigs {
         dev {
-            def keystorePropertiesFile = rootProject.file("key.properties")
+            def keystorePropertiesFile = rootProject.file("prodKey.properties")
             def keystoreProperties = new Properties()
             keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 
@@ -60,7 +60,7 @@ android {
         }
 
         stage {
-            def StagekeystorePropertiesFile = rootProject.file("key.properties")
+            def StagekeystorePropertiesFile = rootProject.file("prodKey.properties")
             def StagekeystoreProperties = new Properties()
             StagekeystoreProperties.load(new FileInputStream(StagekeystorePropertiesFile))
 
@@ -71,7 +71,7 @@ android {
         }
 
         qa {
-            def QakeystorePropertiesFile = rootProject.file("key.properties")
+            def QakeystorePropertiesFile = rootProject.file("prodKey.properties")
             def QakeystoreProperties = new Properties()
             QakeystoreProperties.load(new FileInputStream(QakeystorePropertiesFile))
 
