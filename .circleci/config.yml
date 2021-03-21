@@ -47,11 +47,11 @@ jobs:
                 #DEPLOY_ENV="--release"
                 DEPLOY_ENV="--debug"
               fi
-             # if [ "$CIRCLE_BRANCH" = 'master' ]; then
-             #   THE_ENV="prod"
-             # else
-             #   THE_ENV="$CIRCLE_BRANCH"
-             # fi
+              if [ "$CIRCLE_BRANCH" = 'master' ]; then
+                THE_ENV="prod"
+              else
+                THE_ENV="$CIRCLE_BRANCH"
+              fi
               if [ "$CIRCLE_BRANCH" = 'main' ]; then
                 flutter build appbundle --target-platform android-arm,android-arm64,android-x64 -t lib/main_prod.dart --flavor prod
                 flutter build apk "${DEPLOY_ENV}" --flavor "${THE_ENV}" -t "lib/main_${THE_ENV}.dart"
