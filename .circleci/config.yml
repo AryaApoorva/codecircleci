@@ -24,7 +24,7 @@ jobs:
       - run:
           name: Clone key git repo
           command: |
-              git clone --single-branch --branch main git@github.com:https:AryaApoorva/codecircleci.git
+              git clone --single-branch --branch main git@github.com:AryaApoorva/codecircleci.git
       - run:
           name: Run Flutter doctor
           command: flutter doctor
