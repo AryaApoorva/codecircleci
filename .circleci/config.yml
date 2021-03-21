@@ -52,10 +52,10 @@ jobs:
                 THE_ENV="$CIRCLE_BRANCH"
               fi
               if [ "$CIRCLE_BRANCH" = 'main' ]; then
-                flutter build appbundle --target-platform android-arm,android-arm64,android-x64 -t lib/main_prod.dart --flavor prod
-                flutter build apk "${DEPLOY_ENV}" --flavor "${THE_ENV}" -t "lib/main_${THE_ENV}.dart"
+                flutter build appbundle --target-platform android-arm,android-arm64,android-x64 -t lib/main.dart --flavor prod
+                flutter build apk "${DEPLOY_ENV}" --flavor "${THE_ENV}" -t "lib/main.dart"
               else
-                flutter build apk "${DEPLOY_ENV}" --flavor "${THE_ENV}" -t "lib/main_${THE_ENV}.dart"
+                flutter build apk "${DEPLOY_ENV}" --flavor "${THE_ENV}" -t "lib/main.dart"
               fi
       - run:
           name: Generate QR code, Upload APK+QR to S3 and send Slack notification
