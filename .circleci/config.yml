@@ -1,0 +1,97 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: cirrusci/flutter:1.22.5 #cirrusci/flutter:stable #cirrusci/flutter:v1.12.13-hotfix.8
+        environment:
+          BUCKET: "boatbox-mobile-builds"
+          ANDROID_PREFIX: "android"
+          IOS_PATH: "ios"
+
+
+    branches:
+      only:
+      - dev
+      - main
+
+    steps:
+      - checkout
+
+      # - run:
+      #    name: Clone screen recorder git repo
+      #    command: git clone --single-branch --branch "${CIRCLE_BRANCH}" git@github.com:TSG-Research/educollab.screen-recording.plugin.git ../screenCapture/educollab.screen-recording.plugin
+
+      - run:
+          name: Clone key git repo
+          command: |
+              git clone --single-branch --branch master git@github.com:https:AryaApoorva/codecircleci.git ../codecircleci
+              mv /root/codecircleci/android/prodKey.properties /root/project/android/
+      - run:
+          name: Run Flutter doctor
+          command: flutter doctor
+
+      - run:
+          name: Install AWSCLI & QR Encoder
+          command: |
+              sudo apt update
+              export DEBIAN_FRONTEND=noninteractive
+              sudo ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime
+              #mkdir ~/.aws && echo "region = ap-south-1" > ~/.aws/config
+              sudo apt install -y awscli qrencode
+      - run:
+          name: Build the Android version
+          command: |
+              if [ "$CIRCLE_BRANCH" = 'main' ]; then
+                DEPLOY_ENV="--debug"
+              else
+                #DEPLOY_ENV="--release"
+                DEPLOY_ENV="--debug"
+              fi
+             # if [ "$CIRCLE_BRANCH" = 'master' ]; then
+             #   THE_ENV="prod"
+             # else
+             #   THE_ENV="$CIRCLE_BRANCH"
+             # fi
+              if [ "$CIRCLE_BRANCH" = 'main' ]; then
+                flutter build appbundle --target-platform android-arm,android-arm64,android-x64 -t lib/main_prod.dart --flavor prod
+                flutter build apk "${DEPLOY_ENV}" --flavor "${THE_ENV}" -t "lib/main_${THE_ENV}.dart"
+              else
+                flutter build apk "${DEPLOY_ENV}" --flavor "${THE_ENV}" -t "lib/main_${THE_ENV}.dart"
+              fi
+      - run:
+          name: Generate QR code, Upload APK+QR to S3 and send Slack notification
+          command: |
+              if [ "$CIRCLE_BRANCH" = 'main' ]; then
+                SUFFIX=""
+                export FILE_SUFIX="prod"
+              else
+                SUFFIX=".$CIRCLE_BRANCH"
+                export FILE_SUFIX="$CIRCLE_BRANCH"
+              fi
+                export ANDROID_PATH="${ANDROID_PREFIX}/${CIRCLE_BRANCH}/Educollab.${CIRCLE_BUILD_NUM}"
+              if [ "$CIRCLE_BRANCH" = 'main' ]; then
+                aws s3 cp build/app/outputs/bundle/prodRelease/app-${FILE_SUFIX}-release.aab "s3://${BUCKET}/${ANDROID_PATH}${SUFFIX}.aab"
+                aws s3 cp build/app/outputs/apk/${FILE_SUFIX}/debug/app-${FILE_SUFIX}-debug.apk "s3://${BUCKET}/${ANDROID_PATH}${SUFFIX}.apk"
+              else
+                aws s3 cp build/app/outputs/apk/${FILE_SUFIX}/debug/app-${FILE_SUFIX}-debug.apk "s3://${BUCKET}/${ANDROID_PATH}${SUFFIX}.apk"
+              fi
+              if [ "$CIRCLE_BRANCH" = 'master' ]; then
+                AAB_URL="https://${BUCKET}.s3.ap-south-1.amazonaws.com/${ANDROID_PATH}${SUFFIX}.aab"
+                APK_URL="https://${BUCKET}.s3.ap-south-1.amazonaws.com/${ANDROID_PATH}${SUFFIX}.apk"
+              else
+                APK_URL="https://${BUCKET}.s3.ap-south-1.amazonaws.com/${ANDROID_PATH}${SUFFIX}.apk"
+              fi
+                echo $APK_URL
+                echo $AAB_URL
+              if [ "$CIRCLE_BRANCH" = 'master' ]; then
+              qrencode -m 2 -s 7 -l H -o qrcode_apk.png $APK_URL
+              qrencode -m 2 -s 7 -l H -o qrcode.png $AAB_URL
+              aws s3 cp qrcode_apk.png "s3://${BUCKET}/${ANDROID_PATH}_apk.png"
+              aws s3 cp qrcode.png "s3://${BUCKET}/${ANDROID_PATH}.png"
+              curl -H "Content-Type: application/json" -d "{\"text\":\"Build Succeeded!\", \"blocks\":[{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*Build Succeeded!*\"}}],\"attachments\":[{\"color\":\"#36a64f\",\"fallback\":\"Build Succeeded!\",\"blocks\":[{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*${CIRCLE_USERNAME} merged in branch* *\`${CIRCLE_BRANCH}\`* \n*CircleCI Build URL:-* <${CIRCLE_BUILD_URL}|${CIRCLE_BUILD_URL}>\n*Mobile App build URL:-* <${APK_URL}|${APK_URL}>\"}},{\"type\":\"image\",\"title\":{\"type\":\"plain_text\",\"text\":\"Scan this QR Code to download app\"},\"block_id\":\"image4\",\"image_url\":\"https://${BUCKET}.s3.ap-south-1.amazonaws.com/${ANDROID_PATH}_apk.png\",\"alt_text\":\"QR code.\"}]}]}" -X POST "${SLACK_WEBHOOK_URL}"
+              curl -H "Content-Type: application/json" -d "{\"text\":\"Build Succeeded!\", \"blocks\":[{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*Build Succeeded!*\"}}],\"attachments\":[{\"color\":\"#36a64f\",\"fallback\":\"Build Succeeded!\",\"blocks\":[{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*${CIRCLE_USERNAME} merged in branch* *\`${CIRCLE_BRANCH}\`* \n*CircleCI Build URL:-* <${CIRCLE_BUILD_URL}|${CIRCLE_BUILD_URL}>\n*Mobile App build URL:-* <${AAB_URL}|${AAB_URL}>\"}},{\"type\":\"image\",\"title\":{\"type\":\"plain_text\",\"text\":\"Scan this QR Code to download app\"},\"block_id\":\"image4\",\"image_url\":\"https://${BUCKET}.s3.ap-south-1.amazonaws.com/${ANDROID_PATH}.png\",\"alt_text\":\"QR code.\"}]}]}" -X POST "${SLACK_WEBHOOK_URL}"
+              else
+              qrencode -m 2 -s 7 -l H -o qrcode.png $APK_URL
+              aws s3 cp qrcode.png "s3://${BUCKET}/${ANDROID_PATH}.png"
+              curl -H "Content-Type: application/json" -d "{\"text\":\"Build Succeeded!\", \"blocks\":[{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*Build Succeeded!*\"}}],\"attachments\":[{\"color\":\"#36a64f\",\"fallback\":\"Build Succeeded!\",\"blocks\":[{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*${CIRCLE_USERNAME} merged in branch* *\`${CIRCLE_BRANCH}\`* \n*CircleCI Build URL:-* <${CIRCLE_BUILD_URL}|${CIRCLE_BUILD_URL}>\n*Mobile App build URL:-* <${APK_URL}|${APK_URL}>\"}},{\"type\":\"image\",\"title\":{\"type\":\"plain_text\",\"text\":\"Scan this QR Code to download app\"},\"block_id\":\"image4\",\"image_url\":\"https://${BUCKET}.s3.ap-south-1.amazonaws.com/${ANDROID_PATH}.png\",\"alt_text\":\"QR code.\"}]}]}" -X POST "${SLACK_WEBHOOK_URL}"
+              fi
