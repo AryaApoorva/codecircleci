@@ -49,7 +49,7 @@ jobs:
               if [ "$CIRCLE_BRANCH" = 'main' ]; then
                 THE_ENV="prod"
               else
-                THE_ENV="$CIRCLE_BRANCH"
+                THE_ENV="prod"
               fi
               if [ "$CIRCLE_BRANCH" = 'main' ]; then
                 flutter build appbundle --target-platform android-arm,android-arm64,android-x64 -t lib/main.dart --flavor prod
