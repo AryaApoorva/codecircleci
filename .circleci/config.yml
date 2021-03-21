@@ -46,7 +46,7 @@ jobs:
                 #DEPLOY_ENV="--release"
                 DEPLOY_ENV="--debug"
               fi
-              if [ "$CIRCLE_BRANCH" = 'master' ]; then
+              if [ "$CIRCLE_BRANCH" = 'main' ]; then
                 THE_ENV="prod"
               else
                 THE_ENV="$CIRCLE_BRANCH"
